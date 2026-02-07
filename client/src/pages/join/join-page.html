@@ -1,0 +1,34 @@
+<div class="page join-page">
+  <div class="card" if.bind="isLoading">
+    <p>Loading...</p>
+  </div>
+
+  <div class="card" if.bind="!isLoading && errorMessage && !retroInfo">
+    <h2>Oops!</h2>
+    <p class="error-message">${errorMessage}</p>
+  </div>
+
+  <div class="card" if.bind="!isLoading && retroInfo">
+    <h2>Join Retrospective</h2>
+    <p class="sprint-label">Sprint: <strong>${retroInfo.sprintName}</strong></p>
+    <p class="participant-count">${retroInfo.participants.length} participant(s) already joined</p>
+
+    <div class="form-group">
+      <label for="participantName">Your Name</label>
+      <input
+        id="participantName"
+        type="text"
+        value.bind="participantName"
+        placeholder="Enter your name"
+        class="input"
+        keyup.trigger="$event.key === 'Enter' ? joinRetro() : null"
+      />
+    </div>
+    <div class="error-message" if.bind="errorMessage">${errorMessage}</div>
+    <button class="btn btn-primary" click.trigger="joinRetro()">Join Room</button>
+
+    <div class="admin-badge" if.bind="isAdmin">
+      You are the Scrum Master
+    </div>
+  </div>
+</div>

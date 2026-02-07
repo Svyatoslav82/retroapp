@@ -1,0 +1,277 @@
+<div class="page retro-room">
+  <!-- Error toast -->
+  <div class="toast error-toast" if.bind="retroService.error" click.trigger="dismissError()">
+    ${retroService.error} (click to dismiss)
+  </div>
+
+  <!-- Loading -->
+  <div class="card" if.bind="!session">
+    <p>Connecting to retro...</p>
+  </div>
+
+  <template if.bind="session">
+    <!-- Top bar: phase + timer + controls -->
+    <div class="retro-header">
+      <div class="phase-info">
+        <span class="phase-badge">${phaseLabel}</span>
+        <span class="sprint-name">${session.sprintName}</span>
+      </div>
+      <div class="header-right">
+        <!-- Timer -->
+        <div class="timer-section" if.bind="isItemPhase">
+          <span class="timer-display" if.bind="timerDisplay">${timerDisplay}</span>
+          <template if.bind="isAdmin">
+            <input type="number" value.bind="customTimerMinutes" min="1" max="30" class="input input-tiny" />
+            <span class="timer-unit">min</span>
+            <button class="btn btn-small" click.trigger="startTimer()">Start Timer</button>
+          </template>
+        </div>
+        <!-- SM Controls -->
+        <button
+          if.bind="isAdmin && nextPhaseLabel"
+          class="btn btn-accent"
+          click.trigger="confirmNextPhase()"
+        >
+          ${nextPhaseLabel} &rarr;
+        </button>
+      </div>
+    </div>
+
+    <!-- Confirm dialog -->
+    <div class="modal-overlay" if.bind="showConfirmNext">
+      <div class="modal">
+        <h3>Confirm Phase Change</h3>
+        <p>Move to: <strong>${nextPhaseLabel}</strong>?</p>
+        <div class="modal-actions">
+          <button class="btn" click.trigger="cancelNextPhase()">Cancel</button>
+          <button class="btn btn-primary" click.trigger="nextPhase()">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Participants sidebar -->
+    <div class="retro-body">
+      <aside class="sidebar">
+        <h3>Participants (${participants.length})</h3>
+        <ul class="participant-list">
+          <li repeat.for="p of participants" class="participant-item">
+            <span class="participant-name">${p.name}</span>
+            <span class="admin-tag" if.bind="p.isAdmin">SM</span>
+          </li>
+        </ul>
+      </aside>
+
+      <section class="main-content">
+
+        <!-- ======== LOBBY ======== -->
+        <div if.bind="phase === 'lobby'" class="phase-content">
+          <div class="card centered">
+            <h2>Waiting for the Scrum Master to start...</h2>
+            <p>Share this link with your team:</p>
+            <div class="share-link">
+              <code>${joinLink}</code>
+              <button class="btn btn-small" click.trigger="copyJoinLink()">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======== GOOD_ITEMS / IMPROVE_ITEMS (Collecting Ideas) ======== -->
+        <div if.bind="isItemPhase" class="phase-content">
+          <div class="board-header">
+            <h2>${phaseLabel}</h2>
+            <button class="btn btn-primary" click.trigger="openAddDialog()">+ Add Idea</button>
+          </div>
+          <div class="idea-board">
+            <div repeat.for="item of sortedVisibleItems" class="idea-card">
+              <p class="idea-text">${item.text}</p>
+              <span class="idea-author">- ${item.author}</span>
+            </div>
+            <div class="idea-card empty-card" if.bind="sortedVisibleItems.length === 0">
+              <p>No ideas yet. Be the first to add one!</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======== GOOD_VOTING / IMPROVE_VOTING ======== -->
+        <div if.bind="isVotingPhase" class="phase-content">
+          <div class="board-header">
+            <h2>${phaseLabel}</h2>
+            <p class="vote-hint">Click an item to vote (one vote per item)</p>
+          </div>
+          <div class="idea-board">
+            <div repeat.for="item of sortedVisibleItems" class="idea-card votable ${hasVoted(item) ? 'voted' : ''}" click.trigger="toggleVote(item.id)">
+              <p class="idea-text">${item.text}</p>
+              <span class="idea-author">- ${item.author}</span>
+              <div class="vote-section">
+                <span class="vote-count">${item.votes.length}</span>
+                <span class="vote-icon">${hasVoted(item) ? '&#9829;' : '&#9825;'}</span>
+              </div>
+              <div class="voted-by" if.bind="item.votes.length > 0">
+                <small>${item.votes.join(', ')}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======== BRAINSTORMING ======== -->
+        <div if.bind="phase === 'brainstorming'" class="phase-content">
+          <h2>Brainstorming</h2>
+
+          <!-- SM selects items if not yet selected -->
+          <div if.bind="isAdmin && brainstormItemIds.length === 0" class="card">
+            <h3>Select items to discuss:</h3>
+            <div class="brainstorm-selection">
+              <div
+                repeat.for="item of improveItems"
+                class="idea-card selectable ${isBrainstormSelected(item.id) ? 'selected' : ''}"
+                click.trigger="toggleBrainstormItem(item.id)"
+              >
+                <p class="idea-text">${item.text}</p>
+                <span class="vote-count">${item.votes.length} votes</span>
+              </div>
+            </div>
+            <button class="btn btn-primary" click.trigger="confirmBrainstormSelection()" disabled.bind="brainstormSelectionCount === 0">
+              Confirm Selection
+            </button>
+          </div>
+
+          <!-- Waiting for selection -->
+          <div if.bind="!isAdmin && brainstormItemIds.length === 0" class="card centered">
+            <p>Waiting for Scrum Master to select items for discussion...</p>
+          </div>
+
+          <!-- Discussion threads -->
+          <div if.bind="brainstormItemIds.length > 0" class="brainstorm-threads">
+            <div repeat.for="item of brainstormItems" class="brainstorm-thread card">
+              <h3 class="thread-title">${item.text} <small>(${item.votes.length} votes)</small></h3>
+              <div class="comments">
+                <div repeat.for="comment of getCommentsForItem(item.id)" class="comment">
+                  <strong>${comment.author}:</strong> ${comment.text}
+                </div>
+              </div>
+              <div class="add-comment">
+                <input
+                  type="text"
+                  value.bind="newCommentText"
+                  placeholder="Add a suggestion..."
+                  class="input"
+                  keyup.trigger="$event.key === 'Enter' ? addComment(item.id) : null"
+                />
+                <button class="btn btn-small" click.trigger="addComment(item.id)">Send</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======== ACTION POINTS (two-step: ideas first, then assign) ======== -->
+        <div if.bind="phase === 'action_points'" class="phase-content">
+          <h2>Action Points</h2>
+          <p class="phase-hint">Step 1: Add ideas for what to try next sprint. Step 2: Assign owners.</p>
+
+          <!-- Add new action idea -->
+          <div class="add-action-form card">
+            <div class="form-row">
+              <input
+                type="text"
+                value.bind="newActionText"
+                placeholder="What should we try in the next sprint?"
+                class="input"
+                keyup.trigger="$event.key === 'Enter' ? addActionPoint() : null"
+              />
+              <button class="btn btn-primary" click.trigger="addActionPoint()">Add</button>
+            </div>
+          </div>
+
+          <!-- Action points list -->
+          <div class="action-points-list">
+            <div repeat.for="ap of actionPoints" class="action-point-card card">
+              <p class="action-text">${ap.text}</p>
+              <span class="action-creator">Added by: ${ap.createdBy}</span>
+
+              <!-- Assigned -->
+              <div if.bind="ap.assignee && !isEditingAssignee(ap.id)" class="action-assignee-row">
+                <span class="action-assignee">Assigned to: <strong>${ap.assignee}</strong></span>
+                <button class="btn btn-small" click.trigger="startAssigning(ap.id)">Reassign</button>
+              </div>
+
+              <!-- Not assigned yet -->
+              <div if.bind="!ap.assignee && !isEditingAssignee(ap.id)" class="action-assignee-row">
+                <span class="action-unassigned">Not assigned yet</span>
+                <button class="btn btn-small btn-primary" click.trigger="startAssigning(ap.id)">Assign</button>
+              </div>
+
+              <!-- Assigning in progress -->
+              <div if.bind="isEditingAssignee(ap.id)" class="action-assign-form">
+                <select value.bind="assigneeValue" class="input input-small">
+                  <option value="">Select...</option>
+                  <option repeat.for="p of participants" value.bind="p.name">${p.name}</option>
+                </select>
+                <button class="btn btn-small btn-primary" click.trigger="confirmAssignee(ap.id)">OK</button>
+                <button class="btn btn-small" click.trigger="cancelAssigning()">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======== CLOSED ======== -->
+        <div if.bind="phase === 'closed'" class="phase-content">
+          <div class="card centered">
+            <h2>Retrospective Complete!</h2>
+            <p>Thank you for participating in <strong>${session.sprintName}</strong></p>
+            <button class="btn btn-primary" click.trigger="exportCsv()">Export to CSV</button>
+          </div>
+
+          <!-- Summary -->
+          <div class="summary-section">
+            <h3>What Went Well</h3>
+            <div class="idea-board">
+              <div repeat.for="item of goodItems" class="idea-card">
+                <p class="idea-text">${item.text}</p>
+                <span class="idea-author">- ${item.author}</span>
+                <span class="vote-count">${item.votes.length} votes</span>
+              </div>
+            </div>
+
+            <h3>What Could Be Better</h3>
+            <div class="idea-board">
+              <div repeat.for="item of improveItems" class="idea-card">
+                <p class="idea-text">${item.text}</p>
+                <span class="idea-author">- ${item.author}</span>
+                <span class="vote-count">${item.votes.length} votes</span>
+              </div>
+            </div>
+
+            <h3 if.bind="actionPoints.length > 0">Action Points</h3>
+            <div class="action-points-list" if.bind="actionPoints.length > 0">
+              <div repeat.for="ap of actionPoints" class="action-point-card card">
+                <p class="action-text">${ap.text}</p>
+                <span class="action-assignee" if.bind="ap.assignee">Assigned to: <strong>${ap.assignee}</strong></span>
+                <span class="action-unassigned" if.bind="!ap.assignee">Unassigned</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </template>
+
+  <!-- Add Idea Dialog -->
+  <div class="modal-overlay" if.bind="showAddDialog">
+    <div class="modal">
+      <h3>Add New Idea</h3>
+      <div class="form-group">
+        <textarea
+          value.bind="newItemText"
+          placeholder="Share your thought..."
+          class="input textarea"
+          rows="4"
+        ></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" click.trigger="closeAddDialog()">Cancel</button>
+        <button class="btn btn-primary" click.trigger="saveItem()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>

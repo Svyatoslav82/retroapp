@@ -1,0 +1,108 @@
+{
+  "id": "a7978341",
+  "sprintName": "omicron s1",
+  "phase": "closed",
+  "adminToken": "bc663a60-f8be-4ecd-9354-6c290c300204",
+  "participants": [
+    {
+      "name": "slavo",
+      "isAdmin": true,
+      "joinedAt": "2026-02-07T18:50:39.135Z"
+    },
+    {
+      "name": "Serhii",
+      "isAdmin": false,
+      "joinedAt": "2026-02-07T18:51:00.068Z"
+    },
+    {
+      "name": "Yuan",
+      "isAdmin": false,
+      "joinedAt": "2026-02-07T18:51:28.301Z"
+    }
+  ],
+  "items": [
+    {
+      "id": "f2f52be8",
+      "text": "all was great, especially release",
+      "author": "Serhii",
+      "votes": [
+        "Yuan",
+        "Serhii"
+      ],
+      "category": "good",
+      "createdAt": "2026-02-07T18:53:27.526Z"
+    },
+    {
+      "id": "c029b108",
+      "text": "we had a good planning",
+      "author": "Yuan",
+      "votes": [
+        "Serhii"
+      ],
+      "category": "good",
+      "createdAt": "2026-02-07T18:53:40.459Z"
+    },
+    {
+      "id": "ff37bcc4",
+      "text": "communication with RTB",
+      "author": "Serhii",
+      "votes": [
+        "Yuan",
+        "Serhii"
+      ],
+      "category": "improve",
+      "createdAt": "2026-02-07T18:55:01.831Z"
+    },
+    {
+      "id": "26753f5f",
+      "text": "this was not good week with RTB",
+      "author": "Yuan",
+      "votes": [
+        "Yuan"
+      ],
+      "category": "improve",
+      "createdAt": "2026-02-07T18:55:52.122Z"
+    },
+    {
+      "id": "e801caa1",
+      "text": "any other thinkg",
+      "author": "Yuan",
+      "votes": [
+        "Serhii"
+      ],
+      "category": "improve",
+      "createdAt": "2026-02-07T18:56:06.474Z"
+    }
+  ],
+  "brainstormComments": [
+    {
+      "id": "8da0ea9e",
+      "itemId": "26753f5f",
+      "text": "any",
+      "author": "Serhii",
+      "createdAt": "2026-02-07T18:57:23.636Z"
+    },
+    {
+      "id": "bf4c3632",
+      "itemId": "26753f5f",
+      "text": "anything",
+      "author": "Yuan",
+      "createdAt": "2026-02-07T18:57:31.081Z"
+    }
+  ],
+  "brainstormItemIds": [
+    "26753f5f"
+  ],
+  "actionPoints": [
+    {
+      "id": "d8f41ef9",
+      "text": "dfdfd",
+      "assignee": "slavo",
+      "createdBy": "Yuan"
+    }
+  ],
+  "timerDuration": 300,
+  "timerEndsAt": null,
+  "createdAt": "2026-02-07T18:50:35.087Z",
+  "closedAt": "2026-02-07T18:58:11.910Z"
+}

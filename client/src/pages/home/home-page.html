@@ -1,0 +1,48 @@
+<div class="page home-page">
+  <div class="card" if.bind="isLoading">
+    <p>Loading...</p>
+  </div>
+
+  <!-- Active retro banner -->
+  <div class="card active-retro-banner" if.bind="!isLoading && activeRetro">
+    <h2>Retro In Progress</h2>
+    <p><strong>${activeRetro.sprintName}</strong> — ${activeRetro.participants.length} participant(s)</p>
+    <button class="btn btn-primary" click.trigger="joinActive()">Join Active Retro</button>
+  </div>
+
+  <!-- Create new retro -->
+  <div class="card" if.bind="!isLoading && !activeRetro">
+    <h2>Start New Retrospective</h2>
+    <div class="form-group">
+      <label for="sprintName">Sprint Name</label>
+      <input id="sprintName" type="text" value.bind="sprintName" placeholder="e.g. Sprint 23" class="input" />
+    </div>
+    <div class="form-group">
+      <label for="timerDuration">Timer Duration (minutes)</label>
+      <input id="timerDuration" type="number" value.bind="timerMinutes" min="1" max="30" class="input input-small" />
+    </div>
+    <div class="error-message" if.bind="errorMessage">${errorMessage}</div>
+    <button class="btn btn-primary" click.trigger="createRetro()">Create Retro</button>
+  </div>
+
+  <!-- Past retros -->
+  <div class="card" if.bind="!isLoading && pastRetros.length > 0">
+    <h2>Past Retrospectives</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Sprint</th>
+          <th>Date</th>
+          <th>Export</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr repeat.for="retro of pastRetros">
+          <td>${retro.sprintName}</td>
+          <td>${retro.date}</td>
+          <td><button class="btn btn-small" click.trigger="exportCsv(retro.id)">CSV</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

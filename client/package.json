@@ -1,0 +1,26 @@
+{
+  "name": "retroapp-client",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npx webpack serve --mode development",
+    "build": "npx webpack --mode production"
+  },
+  "dependencies": {
+    "@aurelia/router-lite": "^2.0.0-beta.21",
+    "aurelia": "^2.0.0-beta.21",
+    "socket.io-client": "^4.7.2"
+  },
+  "devDependencies": {
+    "@aurelia/webpack-loader": "^2.0.0-beta.21",
+    "css-loader": "^6.8.1",
+    "html-loader": "^4.2.0",
+    "html-webpack-plugin": "^5.5.3",
+    "style-loader": "^3.3.3",
+    "ts-loader": "^9.4.4",
+    "typescript": "5.4",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1"
+  }
+}

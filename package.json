@@ -1,0 +1,15 @@
+{
+  "name": "retroapp",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "server:build": "cd server && npx tsc",
+    "server:dev": "cd server && npx ts-node src/index.ts",
+    "client:dev": "cd client && npx webpack serve --mode development",
+    "client:build": "cd client && npx webpack --mode production",
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
