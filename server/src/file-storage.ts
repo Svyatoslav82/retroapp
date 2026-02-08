@@ -119,9 +119,11 @@ export class FileStorage {
     if (session.actionPoints.length > 0) {
       lines.push('');
       lines.push('=== Action Points ===');
-      lines.push('Action,Assignee,CreatedBy');
+      lines.push('RelatedItem,Action,Assignee,CreatedBy');
       for (const ap of session.actionPoints) {
-        lines.push(`${esc(ap.text)},${esc(ap.assignee)},${esc(ap.createdBy)}`);
+        const item = session.items.find(i => i.id === ap.itemId);
+        const itemText = item ? item.text : '';
+        lines.push(`${esc(itemText)},${esc(ap.text)},${esc(ap.assignee)},${esc(ap.createdBy)}`);
       }
     }
 

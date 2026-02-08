@@ -266,3 +266,9 @@ __pycache__/
 
 *.rsa
 .vscode/
+
+# no data files
+active-retro.json
+client/dist/
+TE1/
+server/data/retros/

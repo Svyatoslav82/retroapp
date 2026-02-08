@@ -571,6 +571,41 @@ select.input {
   margin-bottom: 16px;
 }
 
+.input-select {
+  max-width: 400px;
+}
+
+/* Action point groups by brainstorm item */
+.action-item-group {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+  border-left: 4px solid var(--accent);
+}
+
+.action-item-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.action-item-header h3,
+.action-item-header h4 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.no-actions-hint {
+  color: var(--text-light);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
 .form-row {
   display: flex;
   gap: 8px;

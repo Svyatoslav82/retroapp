@@ -117,10 +117,10 @@ export function setupSocketHandlers(io: Server, manager: RetroManager): void {
       }
     });
 
-    socket.on('retro:add-action-point', ({ text, assignee }) => {
+    socket.on('retro:add-action-point', ({ text, assignee, itemId }) => {
       if (!data.retroId || !data.participantName) return;
       try {
-        const actionPoint = manager.addActionPoint(text, assignee, data.participantName);
+        const actionPoint = manager.addActionPoint(text, assignee, data.participantName, itemId);
         io.to(data.retroId).emit('retro:action-point-added', actionPoint);
       } catch (err: any) {
         socket.emit('retro:error', { message: err.message });

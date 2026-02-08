@@ -206,7 +206,7 @@ export class RetroManager {
     return comment;
   }
 
-  addActionPoint(text: string, assignee: string, createdBy: string): ActionPoint {
+  addActionPoint(text: string, assignee: string, createdBy: string, itemId: string): ActionPoint {
     if (!this.session) throw new Error('No active retro');
     if (this.session.phase !== RetroPhase.ACTION_POINTS) {
       throw new Error('Action points phase is not active');
@@ -216,7 +216,8 @@ export class RetroManager {
       id: uuidv4().substring(0, 8),
       text,
       assignee,
-      createdBy
+      createdBy,
+      itemId
     };
     this.session.actionPoints.push(actionPoint);
     this.save();

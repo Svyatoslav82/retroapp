@@ -23,9 +23,9 @@ A real-time Sprint Retrospective web application for internal bank use (intranet
 | 3 | **Vote: What Went Well** | One vote per person per item. Votes are visible (not anonymous). |
 | 4 | **What Could Be Better** | Same as phase 2 — plain idea cards, no vote UI. |
 | 5 | **Vote: What Could Be Better** | Same as phase 3. |
-| 6 | **Brainstorming** | SM selects top-voted improvement items. Team adds comments/suggestions per item. |
-| 7 | **Action Points** | Two-step: first everyone adds action ideas (text only), then assign owners via dropdown. |
-| 8 | **Closed** | Summary view + CSV export. |
+| 6 | **Brainstorming** | SM selects top-voted improvement items. After confirmation, selected items are shown as a read-only list. SM then advances to action points. |
+| 7 | **Action Points** | Action points are grouped by brainstorm item. Participants select which item an action point relates to, enter the action text, then assign owners via dropdown. |
+| 8 | **Closed** | Summary view (grouped by brainstorm items) + CSV export. |
 
 ---
 
@@ -135,7 +135,9 @@ retroapp/
 
 6. **Voting:** One vote per person per item, unlimited total votes. Votes are visible (shows who voted). Click to toggle vote/unvote.
 
-7. **Action points are two-step:** First add action idea text, then assign a participant. Reassignment is also supported.
+7. **Action points are linked to brainstorm items.** Each action point has an `itemId` referencing the improvement item it addresses. The UI groups action points under their parent brainstorm item. Participants select which brainstorm item an action point relates to before adding it, then assign owners via a dropdown of participants.
+
+8. **Brainstorming is selection-only.** SM selects which improvement items to carry forward. After confirmation, all participants see a read-only list of selected items. There is no discussion/comment sub-phase — the team proceeds directly to action points.
 
 ---
 
@@ -168,8 +170,7 @@ For production on intranet, change `corsOrigin` to match your server's hostname,
 | `retro:change-phase` | `{}` | SM only |
 | `retro:start-timer` | `{ duration }` | SM only |
 | `retro:select-brainstorm-items` | `{ itemIds[] }` | SM only |
-| `retro:add-brainstorm-comment` | `{ itemId, text }` | Anyone |
-| `retro:add-action-point` | `{ text, assignee }` | Anyone |
+| `retro:add-action-point` | `{ text, assignee, itemId }` | Anyone |
 | `retro:assign-action-point` | `{ actionPointId, assignee }` | Anyone |
 
 ### Server → Client
@@ -183,7 +184,6 @@ For production on intranet, change `corsOrigin` to match your server's hostname,
 | `retro:phase-changed` | `{ phase }` |
 | `retro:timer-started` | `{ endsAt }` |
 | `retro:brainstorm-items-selected` | `{ itemIds[] }` |
-| `retro:brainstorm-comment-added` | BrainstormComment object |
 | `retro:action-point-added` | ActionPoint object |
 | `retro:action-point-updated` | ActionPoint object (after assign/reassign) |
 | `retro:closed` | `{ closedAt }` |
@@ -212,6 +212,14 @@ For production on intranet, change `corsOrigin` to match your server's hostname,
 
 4. **Decorator format** — Aurelia 2 beta.21 uses TC39 standard decorators, not experimental. Removed `experimentalDecorators` from tsconfig, set target to ES2022.
 
+5. **Getter-based `if.bind` not re-evaluating** — Using computed getters like `isItemPhase` / `isVotingPhase` in `if.bind` caused stale rendering (e.g. "What Could Be Better" phase showed both the items section and the voting section simultaneously). Fixed by replacing getter references with inline phase string comparisons directly in the template (e.g. `if.bind="phase === 'good_items' || phase === 'improve_items'"`).
+
+6. **Method calls in template bindings not reactive** — Aurelia 2 beta.21 does not re-evaluate method calls like `isBrainstormSelected(item.id)` or `isEditingAssignee(ap.id)` in `if.bind` or class interpolations when the underlying state changes. Fixed by replacing method calls with direct property comparisons (e.g. `editingAssigneeId === ap.id`) and switching from `Set<string>` to `string[]` for brainstorm selection (arrays are observable, Sets are not).
+
+7. **Assign button on action points not working** — Clicking "Assign" did nothing because `isEditingAssignee(ap.id)` method call in `if.bind` was not reactive. Fixed as part of bug #6 above.
+
+8. **Brainstorm comments not appearing** — The brainstorming discussion sub-phase (add suggestions per item) was broken. Removed this sub-phase entirely as it was unnecessary — brainstorming now only serves as the SM's item selection step, then the team proceeds directly to action points.
+
 ---
 
 ## Known Limitations / Future Improvements
@@ -222,19 +230,55 @@ For production on intranet, change `corsOrigin` to match your server's hostname,
 
 3. **No participant removal by SM.** SM cannot kick participants.
 
-4. **Brainstorm comment input** shares a single `newCommentText` variable across all threads. If discussing multiple items, the input field is shared. Could be improved with per-item input state.
+4. **Timer is visual only** — does not lock input when expired (by design).
 
-5. **Timer is visual only** — does not lock input when expired (by design).
+5. **No HTTPS.** For intranet use this is fine. If needed, put behind a reverse proxy (nginx/IIS) with TLS.
 
-6. **No HTTPS.** For intranet use this is fine. If needed, put behind a reverse proxy (nginx/IIS) with TLS.
+6. **Single-server only.** No clustering/load balancing. Socket.io state is in-memory. Fine for a single team's retro.
 
-7. **Single-server only.** No clustering/load balancing. Socket.io state is in-memory. Fine for a single team's retro.
+7. **CSV export** is available from both the closed retro summary and the home page (past retros list). Action points in CSV now include a `RelatedItem` column showing which brainstorm item they belong to.
 
-8. **CSV export** is available from both the closed retro summary and the home page (past retros list).
+8. **No tests yet.** Could add unit tests for `RetroManager` and integration tests for socket handlers.
 
-9. **No tests yet.** Could add unit tests for `RetroManager` and integration tests for socket handlers.
+9. **No global installs required.** Everything runs via `npx` and local `node_modules`.
 
-10. **No global installs required.** Everything runs via `npx` and local `node_modules`.
+---
+
+## Data Model Reference
+
+### ActionPoint
+```typescript
+{
+  id: string;
+  text: string;
+  assignee: string;    // participant name, or '' if unassigned
+  createdBy: string;   // who added it
+  itemId: string;      // links to the brainstorm RetroItem this action addresses
+}
+```
+
+### RetroItem
+```typescript
+{
+  id: string;
+  text: string;
+  author: string;
+  votes: string[];           // array of voter names
+  category: 'good' | 'improve';
+  createdAt: string;
+}
+```
+
+### BrainstormComment (legacy, no longer used in UI)
+```typescript
+{
+  id: string;
+  itemId: string;
+  text: string;
+  author: string;
+  createdAt: string;
+}
+```
 
 ---
 
@@ -244,6 +288,9 @@ For production on intranet, change `corsOrigin` to match your server's hostname,
 - **Do not use `experimentalDecorators`** — Aurelia 2 beta.21 requires TC39 standard decorators (ES2022 target, TypeScript 5.4)
 - **Do not name component properties `loading`** — it conflicts with the Aurelia router-lite lifecycle hook. Use `isLoading` or similar.
 - **Do not call browser globals in templates** — `window.*`, `navigator.*`, `document.*` must go through component methods
+- **Do not use getter-based conditions in `if.bind`** — Aurelia 2 beta.21 does not reliably re-evaluate computed getters. Use inline expressions that directly reference `@observable` properties (e.g. `phase === 'good_items'` instead of `isItemPhase`)
+- **Do not use method calls in `if.bind` or class interpolations** — Methods like `isSelected(id)` are not reactive. Use direct property comparisons (e.g. `editingAssigneeId === ap.id`) or array `.includes()` on observable arrays
+- **Do not use `Set` for observable state** — Aurelia 2 cannot observe Set mutations. Use plain arrays instead and create new array references on mutation (e.g. `this.arr = this.arr.filter(...)` or `this.arr = [...this.arr, newItem]`)
 - **Reactivity pattern:** The retro-room component uses a `syncState()` method to copy `retroService.session` data into local `@observable` properties. Any new data added to the session must also be copied in `syncState()` and the corresponding socket listener must be added in `retro-service.ts`
 - Server types and client types are duplicated (`server/src/types.ts` and `client/src/models/interfaces.ts`) — keep them in sync if modifying data models
 - The retro-room page (`client/src/pages/retro-room/retro-room.ts` + `.html`) is the most complex component — it handles all 8 phases in a single view using `if.bind` blocks
@@ -251,3 +298,4 @@ For production on intranet, change `corsOrigin` to match your server's hostname,
 - The `RetroManager` class (`server/src/retro-manager.ts`) is the single source of truth for all business logic — all socket handlers and routes delegate to it
 - File storage auto-saves on every state mutation via `RetroManager.save()`
 - To reset a stuck retro: delete `server/data/active-retro.json` and restart the server
+- `BrainstormComment` type and server-side `addBrainstormComment()` still exist but are unused by the UI — kept for backward compatibility with any archived retro data

@@ -45,6 +45,7 @@ export interface ActionPoint {
   text: string;
   assignee: string;
   createdBy: string;
+  itemId: string;
 }
 
 export interface BrainstormComment {

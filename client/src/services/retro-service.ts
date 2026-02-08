@@ -165,8 +165,8 @@ export class RetroService {
     this.socketService.emit('retro:add-brainstorm-comment', { itemId, text });
   }
 
-  addActionPoint(text: string, assignee: string): void {
-    this.socketService.emit('retro:add-action-point', { text, assignee });
+  addActionPoint(text: string, assignee: string, itemId: string): void {
+    this.socketService.emit('retro:add-action-point', { text, assignee, itemId });
   }
 
   assignActionPoint(actionPointId: string, assignee: string): void {

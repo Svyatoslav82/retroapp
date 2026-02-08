@@ -31,11 +31,11 @@ export class RetroRoom implements IRouteViewModel {
   customTimerMinutes: number = 5;
 
   // Brainstorm
-  newCommentText: string = '';
-  selectedBrainstormItemIds: Set<string> = new Set();
+  selectedBrainstormIds: string[] = [];
 
   // Action points
   newActionText: string = '';
+  selectedActionItemId: string = '';
   editingAssigneeId: string = '';
   assigneeValue: string = '';
 
@@ -213,42 +213,27 @@ export class RetroRoom implements IRouteViewModel {
 
   // Brainstorm
   toggleBrainstormItem(itemId: string): void {
-    if (this.selectedBrainstormItemIds.has(itemId)) {
-      this.selectedBrainstormItemIds.delete(itemId);
+    const idx = this.selectedBrainstormIds.indexOf(itemId);
+    if (idx >= 0) {
+      this.selectedBrainstormIds = this.selectedBrainstormIds.filter(id => id !== itemId);
     } else {
-      this.selectedBrainstormItemIds.add(itemId);
+      this.selectedBrainstormIds = [...this.selectedBrainstormIds, itemId];
     }
-    // Force re-render by creating a new Set
-    this.selectedBrainstormItemIds = new Set(this.selectedBrainstormItemIds);
-  }
-
-  isBrainstormSelected(itemId: string): boolean {
-    return this.selectedBrainstormItemIds.has(itemId);
-  }
-
-  get brainstormSelectionCount(): number {
-    return this.selectedBrainstormItemIds.size;
   }
 
   confirmBrainstormSelection(): void {
-    this.retroService.selectBrainstormItems(Array.from(this.selectedBrainstormItemIds));
+    this.retroService.selectBrainstormItems([...this.selectedBrainstormIds]);
   }
 
-  addComment(itemId: string): void {
-    if (!this.newCommentText.trim()) return;
-    this.retroService.addBrainstormComment(itemId, this.newCommentText.trim());
-    this.newCommentText = '';
-  }
-
-  getCommentsForItem(itemId: string): BrainstormComment[] {
-    return this.brainstormComments.filter(c => c.itemId === itemId);
-  }
-
-  // Action points — two-step: add idea first, assign later
+  // Action points — linked to brainstorm items
   addActionPoint(): void {
-    if (!this.newActionText.trim()) return;
-    this.retroService.addActionPoint(this.newActionText.trim(), '');
+    if (!this.newActionText.trim() || !this.selectedActionItemId) return;
+    this.retroService.addActionPoint(this.newActionText.trim(), '', this.selectedActionItemId);
     this.newActionText = '';
+  }
+
+  getActionPointsForItem(itemId: string): ActionPoint[] {
+    return this.actionPoints.filter(ap => ap.itemId === itemId);
   }
 
   startAssigning(apId: string): void {
@@ -266,10 +251,6 @@ export class RetroRoom implements IRouteViewModel {
     this.retroService.assignActionPoint(apId, this.assigneeValue);
     this.editingAssigneeId = '';
     this.assigneeValue = '';
-  }
-
-  isEditingAssignee(apId: string): boolean {
-    return this.editingAssigneeId === apId;
   }
 
   // Links & export

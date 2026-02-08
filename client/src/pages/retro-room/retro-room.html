@@ -18,7 +18,7 @@
       </div>
       <div class="header-right">
         <!-- Timer -->
-        <div class="timer-section" if.bind="isItemPhase">
+        <div class="timer-section" if.bind="phase === 'good_items' || phase === 'improve_items'">
           <span class="timer-display" if.bind="timerDisplay">${timerDisplay}</span>
           <template if.bind="isAdmin">
             <input type="number" value.bind="customTimerMinutes" min="1" max="30" class="input input-tiny" />
@@ -76,7 +76,7 @@
         </div>
 
         <!-- ======== GOOD_ITEMS / IMPROVE_ITEMS (Collecting Ideas) ======== -->
-        <div if.bind="isItemPhase" class="phase-content">
+        <div if.bind="phase === 'good_items' || phase === 'improve_items'" class="phase-content">
           <div class="board-header">
             <h2>${phaseLabel}</h2>
             <button class="btn btn-primary" click.trigger="openAddDialog()">+ Add Idea</button>
@@ -93,7 +93,7 @@
         </div>
 
         <!-- ======== GOOD_VOTING / IMPROVE_VOTING ======== -->
-        <div if.bind="isVotingPhase" class="phase-content">
+        <div if.bind="phase === 'good_voting' || phase === 'improve_voting'" class="phase-content">
           <div class="board-header">
             <h2>${phaseLabel}</h2>
             <p class="vote-hint">Click an item to vote (one vote per item)</p>
@@ -123,14 +123,14 @@
             <div class="brainstorm-selection">
               <div
                 repeat.for="item of improveItems"
-                class="idea-card selectable ${isBrainstormSelected(item.id) ? 'selected' : ''}"
+                class="idea-card selectable ${selectedBrainstormIds.includes(item.id) ? 'selected' : ''}"
                 click.trigger="toggleBrainstormItem(item.id)"
               >
                 <p class="idea-text">${item.text}</p>
                 <span class="vote-count">${item.votes.length} votes</span>
               </div>
             </div>
-            <button class="btn btn-primary" click.trigger="confirmBrainstormSelection()" disabled.bind="brainstormSelectionCount === 0">
+            <button class="btn btn-primary" click.trigger="confirmBrainstormSelection()" disabled.bind="selectedBrainstormIds.length === 0">
               Confirm Selection
             </button>
           </div>
@@ -140,76 +140,81 @@
             <p>Waiting for Scrum Master to select items for discussion...</p>
           </div>
 
-          <!-- Discussion threads -->
-          <div if.bind="brainstormItemIds.length > 0" class="brainstorm-threads">
-            <div repeat.for="item of brainstormItems" class="brainstorm-thread card">
-              <h3 class="thread-title">${item.text} <small>(${item.votes.length} votes)</small></h3>
-              <div class="comments">
-                <div repeat.for="comment of getCommentsForItem(item.id)" class="comment">
-                  <strong>${comment.author}:</strong> ${comment.text}
-                </div>
-              </div>
-              <div class="add-comment">
-                <input
-                  type="text"
-                  value.bind="newCommentText"
-                  placeholder="Add a suggestion..."
-                  class="input"
-                  keyup.trigger="$event.key === 'Enter' ? addComment(item.id) : null"
-                />
-                <button class="btn btn-small" click.trigger="addComment(item.id)">Send</button>
+          <!-- Selected items (read-only) -->
+          <div if.bind="brainstormItemIds.length > 0" class="card">
+            <h3>Items selected for discussion:</h3>
+            <div class="brainstorm-selection">
+              <div repeat.for="item of brainstormItems" class="idea-card selected">
+                <p class="idea-text">${item.text}</p>
+                <span class="vote-count">${item.votes.length} votes</span>
               </div>
             </div>
+            <p class="phase-hint">Scrum Master will advance to Action Points when ready.</p>
           </div>
         </div>
 
-        <!-- ======== ACTION POINTS (two-step: ideas first, then assign) ======== -->
+        <!-- ======== ACTION POINTS (grouped by brainstorm items) ======== -->
         <div if.bind="phase === 'action_points'" class="phase-content">
           <h2>Action Points</h2>
-          <p class="phase-hint">Step 1: Add ideas for what to try next sprint. Step 2: Assign owners.</p>
+          <p class="phase-hint">Add action points for each item selected during brainstorming, then assign owners.</p>
 
-          <!-- Add new action idea -->
+          <!-- Add new action point -->
           <div class="add-action-form card">
             <div class="form-row">
+              <select value.bind="selectedActionItemId" class="input input-select">
+                <option value="">Select item...</option>
+                <option repeat.for="item of brainstormItems" value.bind="item.id">${item.text}</option>
+              </select>
+            </div>
+            <div class="form-row" style="margin-top: 8px;">
               <input
                 type="text"
                 value.bind="newActionText"
-                placeholder="What should we try in the next sprint?"
+                placeholder="What action should we take?"
                 class="input"
                 keyup.trigger="$event.key === 'Enter' ? addActionPoint() : null"
               />
-              <button class="btn btn-primary" click.trigger="addActionPoint()">Add</button>
+              <button class="btn btn-primary" click.trigger="addActionPoint()" disabled.bind="!selectedActionItemId">Add</button>
             </div>
           </div>
 
-          <!-- Action points list -->
-          <div class="action-points-list">
-            <div repeat.for="ap of actionPoints" class="action-point-card card">
-              <p class="action-text">${ap.text}</p>
-              <span class="action-creator">Added by: ${ap.createdBy}</span>
+          <!-- Action points grouped by brainstorm item -->
+          <div repeat.for="item of brainstormItems" class="action-item-group">
+            <div class="action-item-header">
+              <h3>${item.text}</h3>
+              <span class="vote-count">${item.votes.length} votes</span>
+            </div>
 
-              <!-- Assigned -->
-              <div if.bind="ap.assignee && !isEditingAssignee(ap.id)" class="action-assignee-row">
-                <span class="action-assignee">Assigned to: <strong>${ap.assignee}</strong></span>
-                <button class="btn btn-small" click.trigger="startAssigning(ap.id)">Reassign</button>
-              </div>
+            <div class="action-points-list">
+              <div repeat.for="ap of getActionPointsForItem(item.id)" class="action-point-card card">
+                <p class="action-text">${ap.text}</p>
+                <span class="action-creator">Added by: ${ap.createdBy}</span>
 
-              <!-- Not assigned yet -->
-              <div if.bind="!ap.assignee && !isEditingAssignee(ap.id)" class="action-assignee-row">
-                <span class="action-unassigned">Not assigned yet</span>
-                <button class="btn btn-small btn-primary" click.trigger="startAssigning(ap.id)">Assign</button>
-              </div>
+                <!-- Assigned -->
+                <div if.bind="ap.assignee && editingAssigneeId !== ap.id" class="action-assignee-row">
+                  <span class="action-assignee">Assigned to: <strong>${ap.assignee}</strong></span>
+                  <button class="btn btn-small" click.trigger="startAssigning(ap.id)">Reassign</button>
+                </div>
 
-              <!-- Assigning in progress -->
-              <div if.bind="isEditingAssignee(ap.id)" class="action-assign-form">
-                <select value.bind="assigneeValue" class="input input-small">
-                  <option value="">Select...</option>
-                  <option repeat.for="p of participants" value.bind="p.name">${p.name}</option>
-                </select>
-                <button class="btn btn-small btn-primary" click.trigger="confirmAssignee(ap.id)">OK</button>
-                <button class="btn btn-small" click.trigger="cancelAssigning()">Cancel</button>
+                <!-- Not assigned yet -->
+                <div if.bind="!ap.assignee && editingAssigneeId !== ap.id" class="action-assignee-row">
+                  <span class="action-unassigned">Not assigned yet</span>
+                  <button class="btn btn-small btn-primary" click.trigger="startAssigning(ap.id)">Assign</button>
+                </div>
+
+                <!-- Assigning in progress -->
+                <div if.bind="editingAssigneeId === ap.id" class="action-assign-form">
+                  <select value.bind="assigneeValue" class="input input-small">
+                    <option value="">Select...</option>
+                    <option repeat.for="p of participants" value.bind="p.name">${p.name}</option>
+                  </select>
+                  <button class="btn btn-small btn-primary" click.trigger="confirmAssignee(ap.id)">OK</button>
+                  <button class="btn btn-small" click.trigger="cancelAssigning()">Cancel</button>
+                </div>
               </div>
             </div>
+
+            <p class="no-actions-hint" if.bind="getActionPointsForItem(item.id).length === 0">No action points yet for this item.</p>
           </div>
         </div>
 
@@ -242,13 +247,20 @@
             </div>
 
             <h3 if.bind="actionPoints.length > 0">Action Points</h3>
-            <div class="action-points-list" if.bind="actionPoints.length > 0">
-              <div repeat.for="ap of actionPoints" class="action-point-card card">
-                <p class="action-text">${ap.text}</p>
-                <span class="action-assignee" if.bind="ap.assignee">Assigned to: <strong>${ap.assignee}</strong></span>
-                <span class="action-unassigned" if.bind="!ap.assignee">Unassigned</span>
+            <template if.bind="actionPoints.length > 0">
+              <div repeat.for="item of brainstormItems" class="action-item-group">
+                <div class="action-item-header">
+                  <h4>${item.text}</h4>
+                </div>
+                <div class="action-points-list">
+                  <div repeat.for="ap of getActionPointsForItem(item.id)" class="action-point-card card">
+                    <p class="action-text">${ap.text}</p>
+                    <span class="action-assignee" if.bind="ap.assignee">Assigned to: <strong>${ap.assignee}</strong></span>
+                    <span class="action-unassigned" if.bind="!ap.assignee">Unassigned</span>
+                  </div>
+                </div>
               </div>
-            </div>
+            </template>
           </div>
         </div>
 
